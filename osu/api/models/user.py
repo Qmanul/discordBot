@@ -1,11 +1,9 @@
 from __future__ import annotations
+
 from datetime import datetime
 from typing import List, Optional
 
-import aiosu.models
-
 from . import BaseModel
-
 
 AVATAR_URL_BASE = "https://a.ripple.moe/{}"
 
@@ -57,3 +55,36 @@ class RippleUserFull(RippleUser):
     ctb: RippleModeStats
     mania: RippleModeStats
     silence_info: RippleSilenceInfo
+
+
+class GatariUser(BaseModel):
+    a_count: int
+    avg_accuracy: float
+    avg_accuracy_ap: float
+    avg_accuracy_rx: float
+    avg_hits_play: float
+    country_rank: int
+    country_rank_ap: int
+    country_rank_rx: int
+    id: int
+    level: int
+    level_progress: int
+    max_combo: int
+    playcount: int
+    playtime: int
+    pp: int
+    pp_4k: int
+    pp_7k: int
+    pp_ap: int | None
+    pp_rx: int | None
+    rank: int
+    rank_ap: int
+    rank_rx: int
+    ranked_score: int
+    replays_watched: int
+    s_count: int
+    sh_count: int
+    total_hits: int
+    total_score: int
+    x_count: int
+    xh_count: int

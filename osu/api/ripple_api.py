@@ -1,69 +1,38 @@
 from __future__ import annotations
-from io import BytesIO
+
 from typing import TYPE_CHECKING
-from typing import Literal
-import aiohttp
-import orjson
-from aiolimiter import AsyncLimiter
-from aiosu.exceptions import APIException
+
 from aiosu.helpers import add_param
 from aiosu.helpers import from_list
 from aiosu.models import Gamemode
+
+from osu.api.base_api import BaseClient
 from osu.api.models.beatmap import RippleBeatmapUserMostPlayed, RippleScoreUser, RippleScoreBeatmap
 from osu.api.models.user import RippleUser, RippleUserFull
 from utils.utils import process_query_type
 
 if TYPE_CHECKING:
-    from types import TracebackType
     from typing import Any
-    from typing import Optional
 
 __all__ = ("RippleClient", "RippleRelaxClient")
 
-ClientRequestType = Literal["GET", "POST", "DELETE", "PUT", "PATCH"]
 
-
-def get_content_type(content_type: str) -> str:
-    return content_type.split(";")[0]
-
-
-class RippleClient:
+class RippleClient(BaseClient):
     __slots__ = (
-        "token",
-        "base_url",
-        "_session",
-        "_limiter",
+        'token',
         'authorization_header',
         'relax_param_keyname',
-        'relax'
+        'relax',
+        'base_url'
     )
 
-    def __init__(
-            self,
-            **kwargs: Any,
-    ) -> None:
-        max_rate, time_period = kwargs.pop("limiter", (2000, 60))
+    def __init__(self, **kwargs: Any, ) -> None:
+        super().__init__(**kwargs)
         self.token: str = kwargs.pop('token', '')
-        self.base_url: str = kwargs.pop('base_url', 'https://ripple.moe')
         self.authorization_header: str = kwargs.pop('authorization_header', 'X-Ripple-Token')
         self.relax_param_keyname: str = kwargs.pop('relax_param_keyname', 'relax')
         self.relax: int = int(kwargs.pop('relax', False))
-        self._limiter: AsyncLimiter = AsyncLimiter(
-            max_rate=max_rate,
-            time_period=time_period,
-        )
-        self._session: Optional[aiohttp.ClientSession] = None
-
-    async def __aenter__(self) -> RippleClient:
-        return self
-
-    async def __aexit__(
-            self,
-            exc_type: Optional[type[BaseException]],
-            exc: Optional[BaseException],
-            traceback: Optional[TracebackType],
-    ) -> None:
-        await self.aclose()
+        self.base_url: str = 'https://ripple.moe'
 
     async def _get_headers(self) -> dict[str, str]:
         return {
@@ -71,35 +40,6 @@ class RippleClient:
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-
-    async def _request(
-            self,
-            request_type: ClientRequestType,
-            *args: Any,
-            **kwargs: Any,
-    ) -> Any:
-        if self._session is None:
-            self._session = aiohttp.ClientSession(headers=await self._get_headers())
-
-        async with self._limiter:
-            async with self._session.request(request_type, *args, **kwargs) as resp:
-                if resp.status == 204:
-                    return
-                if resp.status != 200:
-                    raise APIException(resp.status, await resp.text())
-                content_type = get_content_type(resp.headers.get("content-type", ""))
-                if content_type == "application/json":
-                    return orjson.loads(await resp.read())
-                if content_type == "application/octet-stream":
-                    return BytesIO(await resp.read())
-                if content_type.startswith("application/x-osu"):
-                    return BytesIO(await resp.read())
-                if content_type == "text/plain":
-                    return await resp.text()
-                raise APIException(
-                    resp.status,
-                    f"Unhandled Content Type '{content_type}'",
-                )
 
     async def get_user(self, user_query: int | str, **kwargs: Any) -> RippleUserFull:
         url = f"{self.base_url}/api/v1/users/full"
@@ -172,7 +112,7 @@ class RippleClient:
     ) -> list[RippleBeatmapUserMostPlayed]:
 
         url = f"{self.base_url}/api/v1/users/most_played"
-        qtype = await process_query_type(user_query, kwargs,)
+        qtype = await process_query_type(user_query, kwargs, )
         params: dict[str, object] = {
             qtype: user_query
         }
@@ -196,11 +136,6 @@ class RippleClient:
         add_param(params, kwargs, key="mode", converter=lambda x: str(Gamemode(x)))
         json = await self._request("GET", url, params=params)
         return from_list(RippleScoreBeatmap.model_validate, json.get("scores", []))
-
-    async def aclose(self) -> None:
-        if self._session:
-            await self._session.close()
-            self._session = None
 
 
 class RippleRelaxClient(RippleClient):

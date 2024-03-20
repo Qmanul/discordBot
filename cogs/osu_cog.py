@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 import traceback
+
 import aiosu.models
 import discord
 from discord import app_commands
 from discord.ext import commands
+
+from config import config
 from osu.api import ripple_api, akatsuki_api
 from osu.osu_helper import OsuHelper, OsuClient
-from config import config
 
 
 class OsuCog(commands.Cog):
