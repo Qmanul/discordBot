@@ -1,0 +1,7 @@
+/.venv/
+/.vscode/
+/alembic.ini
+/alembic/
+**/__init__.py
+**/__pycahce__/
+**/*.env
