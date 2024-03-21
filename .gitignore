@@ -6,3 +6,5 @@
 **/__pycahce__/
 **/*.env
 /.idea/
+**/*_test.py
+osu/beatmaps/
