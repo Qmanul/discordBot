@@ -62,23 +62,19 @@ class BaseClient:
     ) -> Any:
         if self._session is None:
             self._session = aiohttp.ClientSession(headers=await self._get_headers())
-
         async with self._limiter:
             async with self._session.request(request_type, *args, **kwargs) as resp:
                 if resp.status == 204:
                     return
                 if resp.status != 200:
                     raise APIException(resp.status, await resp.text())
+
                 content_type = get_content_type(resp.headers.get("content-type", ""))
                 if content_type == "application/json":
                     return orjson.loads(await resp.read())
-                if content_type == "application/octet-stream":
-                    return BytesIO(await resp.read())
-                if content_type.startswith("application/x-osu"):
+                if content_type in ("application/octet-stream", 'image/jpg') or content_type.startswith(
+                        "application/x-osu"):
                     return BytesIO(await resp.read())
                 if content_type == "text/plain":
                     return await resp.text()
-                raise APIException(
-                    resp.status,
-                    f"Unhandled Content Type '{content_type}'",
-                )
+                raise APIException(resp.status, f"Unhandled Content Type '{content_type}'", )

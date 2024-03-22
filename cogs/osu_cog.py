@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from config import config
-from osu.api import ripple_api, akatsuki_api
+from osu.api import ripple_api, akatsuki_api, gatari_api, direct_api
 from osu.osu_helper import OsuHelper, OsuClient
 
 
@@ -22,16 +22,20 @@ class OsuCog(commands.Cog):
         self._ripplerx_client = ripple_api.RippleRelaxClient(token=config.ripple_token.get_secret_value())
         self._akatsuki_client = akatsuki_api.AkatsukiClient()
         self._akatsukirx_client = akatsuki_api.AkatsukiRelaxClient()
+        self._gatari_client = gatari_api.GatariClient()
+        self._direct_client = direct_api.DirectClient()
 
-        self.server_dict = {
+        self.api_client_map = {
             'bancho': self._bancho_client,
             'ripple': self._ripple_client,
             'ripplerx': self._ripplerx_client,
             'akatsuki': self._akatsuki_client,
             'akatsukirx': self._akatsukirx_client,
+            'gatari': self._gatari_client,
+            'direct': self._direct_client,
         }
 
-        self.osu_helper = OsuHelper(OsuClient(self.server_dict))
+        self.osu_helper = OsuHelper(OsuClient(self.api_client_map))
 
     @commands.hybrid_command(name='link', aliases=['osuset'])
     async def osu_link(
@@ -55,7 +59,7 @@ class OsuCog(commands.Cog):
             self,
             ctx: commands.Context[commands.Bot],
             username: str | None = None,
-            limit: int = 1,
+            limit: app_commands.Range[int, 0, 5] = 1,
             server: str = 'bancho') -> None:
         """
         get user recent score
@@ -63,7 +67,7 @@ class OsuCog(commands.Cog):
         ---------
         username: str
           player's username
-        limit: int
+        limit: app_commands.Range[int, 0, 5]
           number of scores to return
         server: str
           preferred server
@@ -93,6 +97,7 @@ class OsuCog(commands.Cog):
         server: str
             preferred server
         """
+        await ctx.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
             resp = await self.osu_helper.process_user_info(session, username=username, discord_id=ctx.author.id,
                                                            gamemode=gamemode, detailed=detailed, server=server)
@@ -109,7 +114,7 @@ class OsuCog(commands.Cog):
             self,
             interaction: discord.Interaction,
             current: str) -> list[app_commands.Choice[str]]:
-        options = self.server_dict.keys()
+        options = self.api_client_map.keys()
         return [app_commands.Choice(name=option, value=option) for option in options if
                 option.lower().startswith(current.lower())][:25]
 

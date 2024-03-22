@@ -1,6 +1,8 @@
 from datetime import datetime
+
+from pydantic import Field
+
 from . import BaseModel
-from .user import RippleUser
 
 
 class RippleDifficulty(BaseModel):
@@ -11,7 +13,7 @@ class RippleDifficulty(BaseModel):
 
 
 class RippleBeatmap(BaseModel):
-    beatmap_id: int
+    id: int = Field(alias='beatmap_id')
     beatmapset_id: int
     beatmap_md5: str
     song_name: str
@@ -31,30 +33,20 @@ class RippleBeatmapUserMostPlayed(BaseModel):
     playcount: int
 
 
-class RippleScore(BaseModel):
-    id: int
+class GatariBeatmap(BaseModel):
+    ar: float
+    artist: str
+    id: int = Field(alias='beatmap_id')
     beatmap_md5: str
-    score: int
-    max_combo: int
-    full_combo: int
-    mods: int
-    count_300: int
-    count_100: int
-    count_50: int
-    count_geki: int
-    count_katu: int
-    count_miss: int
-    time: datetime
-    play_mode: int
-    accuracy: float
-    pp: float
-    rank: str
-    completed: int
-
-
-class RippleScoreBeatmap(RippleScore):
-    user: RippleUser
-
-
-class RippleScoreUser(RippleScore):
-    beatmap: RippleBeatmap
+    beatmapset_id: int
+    bpm: int
+    creator: str
+    difficulty: float
+    max_combo: int = Field(alias='fc')
+    hit_length: int
+    od: float
+    ranked: int
+    ranked_status_frozen: int
+    song_name: str
+    title: str
+    version: str

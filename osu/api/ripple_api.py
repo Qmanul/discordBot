@@ -7,7 +7,8 @@ from aiosu.helpers import from_list
 from aiosu.models import Gamemode
 
 from osu.api.base_api import BaseClient
-from osu.api.models.beatmap import RippleBeatmapUserMostPlayed, RippleScoreUser, RippleScoreBeatmap
+from osu.api.models.beatmap import RippleBeatmapUserMostPlayed
+from osu.api.models.score import RippleScoreUser, RippleScoreBeatmap
 from osu.api.models.user import RippleUser, RippleUserFull
 from utils.utils import process_query_type
 
@@ -85,7 +86,7 @@ class RippleClient(BaseClient):
             self.relax_param_keyname: self.relax
         }
         add_param(params, kwargs, key="page", param_name='p')
-        add_param(params, kwargs, key="mode", converter=lambda x: str(Gamemode(x)))
+        add_param(params, kwargs, key="gamemode", param_name='mode', converter=lambda x: str(Gamemode(x)))
         json = await self._request("GET", url, params=params)
         return from_list(RippleScoreUser.model_validate, scores if (scores := json.get('scores')) is not None else [])
 
@@ -133,7 +134,7 @@ class RippleClient(BaseClient):
             qtype: beatmap_query,
             self.relax_param_keyname: self.relax
         }
-        add_param(params, kwargs, key="mode", converter=lambda x: str(Gamemode(x)))
+        add_param(params, kwargs, key='gamemode', param_name="mode", converter=lambda x: str(Gamemode(x)))
         json = await self._request("GET", url, params=params)
         return from_list(RippleScoreBeatmap.model_validate, json.get("scores", []))
 

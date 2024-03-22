@@ -1,6 +1,7 @@
-from models import OsuUserModel as UserDBModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from database.models import OsuUserModel as UserDBModel
 
 
 async def get_user(db_session: AsyncSession, discord_id: int) -> UserDBModel:

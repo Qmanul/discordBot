@@ -1,35 +1,53 @@
 from __future__ import annotations
+
 import aiosu.models
 import discord
-from osu.api.models.beatmap import RippleScoreUser
-from osu.api.models.user import RippleUserFull
+
+from osu.api.models.score import RippleScoreUser, GatariScore
+from osu.api.models.user import RippleUserFull, GatariUser
 
 
 # В пизду я не собираюсь прописывать эмбеды
-async def process_ripple_user(user_info: RippleUserFull, **kwargs) -> discord.Embed:
+
+
+async def bancho_user(user_info: aiosu.models.User, **kwargs) -> discord.Embed:
     return discord.Embed(title=f'{user_info.username}', description=f'{kwargs.pop("server")}')
 
 
-async def process_bancho_user(user_info: aiosu.models.User, **kwargs) -> discord.Embed:
+async def ripple_user(user_info: RippleUserFull, **kwargs) -> discord.Embed:
     return discord.Embed(title=f'{user_info.username}', description=f'{kwargs.pop("server")}')
 
 
-async def process_bancho_score(score_info: aiosu.models.Score, **kwargs) -> discord.Embed:
-    return discord.Embed(title=f'{score_info.beatmapset.title}', description=f'{kwargs.pop("server")}')
+async def gatari_user(user_info: GatariUser, **kwargs) -> discord.Embed:
+    return discord.Embed(title=f'{user_info.user_info.username}', description=f'{kwargs.pop("server")}')
 
 
-async def process_ripple_score(score_info: RippleScoreUser, **kwargs) -> discord.Embed:
+async def bancho_score(score_info: aiosu.models.Score, **kwargs) -> discord.Embed:
+    return discord.Embed(
+        title=f'{score_info.beatmapset.title}', description=f'{kwargs.pop("server")}'
+    ).add_field(
+        name='fc_pp', value=kwargs.pop('fc_pp')
+    )
+
+
+async def ripple_score(score_info: RippleScoreUser, **kwargs) -> discord.Embed:
     return discord.Embed(title=f'{score_info.beatmap.song_name}', description=f'{kwargs.pop("server")}')
 
 
+async def gatari_score(score_info: GatariScore, **kwargs) -> discord.Embed:
+    return discord.Embed(title=f'{score_info.beatmap.title}', description=f'{kwargs.pop("server")}')
+
+
 user_action_map = {
-    aiosu.models.User: process_bancho_user,
-    RippleUserFull: process_ripple_user,
+    aiosu.models.User: bancho_user,
+    RippleUserFull: ripple_user,
+    GatariUser: gatari_user,
 }
 
 score_action_map = {
-    aiosu.models.Score: process_bancho_score,
-    RippleScoreUser: process_ripple_score,
+    aiosu.models.Score: bancho_score,
+    RippleScoreUser: ripple_score,
+    GatariScore: gatari_score
 }
 
 

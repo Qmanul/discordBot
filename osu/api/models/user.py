@@ -5,8 +5,6 @@ from typing import List, Optional
 
 from . import BaseModel
 
-AVATAR_URL_BASE = "https://a.ripple.moe/{}"
-
 
 class RippleUser(BaseModel):
     code: int
@@ -57,6 +55,21 @@ class RippleUserFull(RippleUser):
     silence_info: RippleSilenceInfo
 
 
+class GatariUserInfo(BaseModel):
+    abbr: None
+    clanid: int | None
+    country: str
+    favourite_mode: int
+    followers_count: int
+    id: int
+    latest_activity: datetime
+    play_style: int
+    privileges: int
+    registered_on: datetime
+    username: str
+    username_aka: str
+
+
 class GatariUser(BaseModel):
     a_count: int
     avg_accuracy: float
@@ -75,11 +88,11 @@ class GatariUser(BaseModel):
     pp: int
     pp_4k: int
     pp_7k: int
-    pp_ap: int | None
-    pp_rx: int | None
-    rank: int
-    rank_ap: int
-    rank_rx: int
+    pp_ap: int
+    pp_rx: int
+    rank: int | None
+    rank_ap: int | None
+    rank_rx: int | None
     ranked_score: int
     replays_watched: int
     s_count: int
@@ -88,3 +101,4 @@ class GatariUser(BaseModel):
     total_score: int
     x_count: int
     xh_count: int
+    user_info: GatariUserInfo
