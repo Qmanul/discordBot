@@ -13,6 +13,9 @@ async def get_score_performance(
     beatmap = rosu_pp_py.Beatmap(path=filepath)
     statistics = await get_score_statistics(score)
 
+    calc = rosu_pp_py.Calculator(**statistics)
+    pp = calc.performance(beatmap).pp
+
     fc_statistics = statistics
     fc_statistics.update({
         'n300': statistics['n300'] + statistics['n_misses'],
@@ -23,10 +26,6 @@ async def get_score_performance(
     calc = rosu_pp_py.Calculator(**fc_statistics)
     fc_pp = calc.performance(beatmap).pp
 
-    calc.set_n_misses(statistics['n_misses'])
-    calc.set_combo(statistics['combo'])
-    calc.set_n300(statistics['n300'])
-    pp = calc.performance(beatmap).pp
     return pp, fc_pp
 
 
