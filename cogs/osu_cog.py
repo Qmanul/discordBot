@@ -5,10 +5,10 @@ import traceback
 import aiosu.models
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from config import config
-from osu.api import ripple_api, akatsuki_api, gatari_api, direct_api
+from osu.api import (RippleClient, RippleRelaxClient, DirectClient, AkatsukiClient, GatariClient, AkatsukiRelaxClient)
 from osu.osu_helper import OsuHelper, OsuClient
 
 
@@ -18,12 +18,12 @@ class OsuCog(commands.Cog):
 
         self._bancho_client = aiosu.v2.Client(client_id=config.osu_client_id.get_secret_value(),
                                               client_secret=config.osu_client_secret.get_secret_value())
-        self._ripple_client = ripple_api.RippleClient(token=config.ripple_token.get_secret_value())
-        self._ripplerx_client = ripple_api.RippleRelaxClient(token=config.ripple_token.get_secret_value())
-        self._akatsuki_client = akatsuki_api.AkatsukiClient()
-        self._akatsukirx_client = akatsuki_api.AkatsukiRelaxClient()
-        self._gatari_client = gatari_api.GatariClient()
-        self._direct_client = direct_api.DirectClient()
+        self._ripple_client = RippleClient(token=config.ripple_token.get_secret_value())
+        self._ripplerx_client = RippleRelaxClient(token=config.ripple_token.get_secret_value())
+        self._akatsuki_client = AkatsukiClient()
+        self._akatsukirx_client = AkatsukiRelaxClient()
+        self._gatari_client = GatariClient()
+        self._direct_client = DirectClient()
 
         self.api_client_map = {
             'bancho': self._bancho_client,
@@ -117,6 +117,10 @@ class OsuCog(commands.Cog):
         options = self.api_client_map.keys()
         return [app_commands.Choice(name=option, value=option) for option in options if
                 option.lower().startswith(current.lower())][:25]
+
+    @tasks.loop(minutes=5)
+    async def poll_tracked_users(self):
+        ...
 
     @staticmethod
     async def return_embed_or_string(response: discord.Embed | str, ctx: commands.Context) -> None:
