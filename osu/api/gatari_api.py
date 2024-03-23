@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-import aiosu.models
 from aiosu.exceptions import APIException
 from aiosu.helpers import add_param, from_list
 from aiosu.models import Gamemode
 
-from osu.api.base_api import BaseClient
+from osu.api import BaseClient
 from osu.api.models.score import GatariScore
 from osu.api.models.user import GatariUser, GatariUserInfo
 
@@ -37,7 +36,7 @@ class GatariClient(BaseClient):
             kwargs,
             key='gamemode',
             param_name='mode',
-            converter=lambda x: aiosu.models.Gamemode(x).id
+            converter=lambda x: Gamemode(x).id
         )
 
         json = await self._request("GET", url, params=params)

@@ -6,7 +6,7 @@ from aiosu.helpers import add_param
 from aiosu.helpers import from_list
 from aiosu.models import Gamemode
 
-from osu.api.base_api import BaseClient
+from osu.api import BaseClient
 from osu.api.models.beatmap import RippleBeatmapUserMostPlayed
 from osu.api.models.score import RippleScoreUser, RippleScoreBeatmap
 from osu.api.models.user import RippleUser, RippleUserFull

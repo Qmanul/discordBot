@@ -4,7 +4,7 @@ from io import BytesIO
 
 from aiosu.helpers import add_param
 
-from osu.api.base_api import BaseClient
+from osu.api import BaseClient
 
 
 class DirectClient(BaseClient):
