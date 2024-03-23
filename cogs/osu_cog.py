@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import traceback
 
-import aiosu.models
 import discord
+from aiosu.models import Gamemode
+from aiosu.v2 import Client
 from discord import app_commands
 from discord.ext import commands, tasks
 
@@ -16,8 +17,8 @@ class OsuCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
-        self._bancho_client = aiosu.v2.Client(client_id=config.osu_client_id.get_secret_value(),
-                                              client_secret=config.osu_client_secret.get_secret_value())
+        self._bancho_client = Client(client_id=config.osu_client_id.get_secret_value(),
+                                     client_secret=config.osu_client_secret.get_secret_value())
         self._ripple_client = RippleClient(token=config.ripple_token.get_secret_value())
         self._ripplerx_client = RippleRelaxClient(token=config.ripple_token.get_secret_value())
         self._akatsuki_client = AkatsukiClient()
@@ -37,6 +38,7 @@ class OsuCog(commands.Cog):
 
         self.osu_helper = OsuHelper(OsuClient(self.api_client_map))
 
+    #  ---------------- user info related ----------------
     @commands.hybrid_command(name='link', aliases=['osuset'])
     async def osu_link(
             self,
@@ -82,7 +84,7 @@ class OsuCog(commands.Cog):
     async def osu_info(
             self, ctx: commands.Context[commands.Bot],
             username: str = None,
-            gamemode: aiosu.models.Gamemode = aiosu.models.Gamemode.STANDARD,
+            gamemode: Gamemode = Gamemode.STANDARD,
             server: str = 'bancho', detailed: bool = False) -> None:
         """
         get user statistics
@@ -104,10 +106,6 @@ class OsuCog(commands.Cog):
 
             await self.return_embed_or_string(resp, ctx)
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send('Something went wrong', ephemeral=True)
-        print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
-
     @osu_info.autocomplete('server')
     @osu_recent.autocomplete('server')
     async def server_autocomplete(
@@ -118,9 +116,26 @@ class OsuCog(commands.Cog):
         return [app_commands.Choice(name=option, value=option) for option in options if
                 option.lower().startswith(current.lower())][:25]
 
+    # ---------------- user tracking related ----------------
+    # ping user: "<@{uid}>"
+    @commands.hybrid_command(name='register')
+    async def register_user(
+            self,
+            ctx: commands.Context, username: str = '',
+            gamemode: Gamemode = Gamemode.STANDARD
+    ) -> None:
+        """
+
+        """
+        ...
+
     @tasks.loop(minutes=5)
     async def poll_tracked_users(self):
         ...
+
+    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+        await ctx.send('Something went wrong', ephemeral=True)
+        print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
 
     @staticmethod
     async def return_embed_or_string(response: discord.Embed | str, ctx: commands.Context) -> None:
