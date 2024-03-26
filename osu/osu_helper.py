@@ -8,9 +8,10 @@ import discord
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud import osu_user_crud
+from crud import tracking_crud
 from osu.api.models.score import GatariScore, RippleScoreUser
-from osu.api.models.user import GatariUser, RippleUserFull
-from osu.osu_embed import create_user_info_embed, create_score_embed
+from osu.api.models.user import GatariUser, RippleUserFull, OsutrackUser
+from osu.osu_embed import create_user_info_embed, create_score_embed, create_new_hiscore_embed
 from osu.rosu import get_score_performance
 from utils.file_utils import path_exists, extract_osu_from_osz_bytes
 
@@ -47,7 +48,18 @@ class OsuClient:
         async with self.api_client_map[server] as client:
             return await client.get_user(username, **kwargs)
 
-    async def get_beatmap_filepath(self, beatmap):
+    async def get_user_id(
+            self,
+            username: str,
+            **kwargs
+    ) -> int:
+        if (server := kwargs.get('server', 'bancho')) not in self.api_client_map.keys():
+            raise ValueError
+
+        async with self.api_client_map[server] as client:
+            return (await client.get_user(username, **kwargs)).id
+
+    async def get_beatmap_filepath(self, beatmap) -> str:
         filepath = os.path.join(self.beatmaps_filepath, f'{beatmap.id}.osu')
         if await path_exists(filepath):
             return filepath
@@ -56,6 +68,15 @@ class OsuClient:
             await extract_osu_from_osz_bytes(await client.get_beatmapset_file(beatmap.beatmapset_id))
 
         return filepath
+
+    async def update_user(self, user_id: int, **kwargs) -> OsutrackUser:
+        async with self.api_client_map['osutrack'] as client:
+            return await client.update_user(user_id, **kwargs)
+
+    async def get_score(self, score_id, gamemode, **kwargs) -> aiosu.models.Score:
+        async with self.api_client_map['bancho'] as client:
+            print(score_id, gamemode)
+            return await client.get_score(score_id, gamemode, **kwargs)
 
 
 class OsuHelper:
@@ -114,10 +135,10 @@ class OsuHelper:
             db_user = await osu_user_crud.get_user(session, discord_id)
 
             try:
+                username = db_user.osu_username
+
                 if not gamemode:
                     gamemode = db_user.osu_gamemode
-
-                username = db_user.osu_username
 
             except AttributeError:
                 return 'You are not linked to osu account'
@@ -133,3 +154,75 @@ class OsuHelper:
             return f'{username} was not found'
 
         return await create_user_info_embed(user_info, gamemode=gamemode, **kwargs)
+
+    async def process_tracking_link(self, session, discord_id: int, **kwargs):
+        username = kwargs.pop('username', None)
+        gamemode = kwargs.pop('gamemode', None)
+
+        if not username:
+            db_user = await osu_user_crud.get_user(session, discord_id)
+
+            try:
+                username = db_user.osu_username
+
+                if not gamemode:
+                    gamemode = db_user.osu_gamemode
+
+            except AttributeError:
+                return 'You are not linked to osu account'
+
+        try:
+            gamemode = aiosu.models.Gamemode(gamemode)
+        except ValueError:
+            return 'Please provide a valid gamemode'
+
+        try:
+            user_info = await self.osu_client.get_user_info(username, **kwargs)
+        except aiosu.exceptions.APIException:
+            return f'{username} was not found'
+
+        await tracking_crud.create_or_update_user(session, discord_id, osu_gamemode=gamemode, osu_user_id=user_info.id)
+
+        return f'Successfully linked <@{discord_id}> to **{user_info.username}**'
+
+    async def process_tracking_register(self, session: AsyncSession, discord_id: int, channel: discord.TextChannel):
+        try:
+            await tracking_crud.register_user(session, discord_id, channel.id)
+        except ValueError:
+            return f'Tracking is not enabled in **{channel.name}**'
+
+        return f'Successfully registered <@{discord_id}> in channel {channel.name}'
+
+    async def process_tracking_enable(self, session: AsyncSession, channel: discord.TextChannel):
+        if await tracking_crud.get_channel(session, channel_id=channel.id):
+            return f'Tracking is already enabled in channel **{channel.name}**'
+
+        await tracking_crud.create_or_update_channel(session, channel_id=channel.id)
+        return f'Successfully enabled tracking in channel **{channel.name}**'
+
+    async def process_tracking_disable(self, session: AsyncSession, channel: discord.TextChannel):
+        try:
+            await tracking_crud.remove_tracked_channel(session, channel_id=channel.id)
+        except ValueError:
+            return f'Tracking is not enabled in **{channel.name}**'
+
+        return f'Successfully disabled tracking in channel **{channel.name}**'
+
+    async def process_tracked_users(self, session: AsyncSession):
+        result = []
+        tracked_users = await tracking_crud.get_users(session)
+        for user in tracked_users:
+            if not ((osu_user_id := user.osu_user_id) and (channels := user.tracked_channels)):
+                continue
+
+            update_info = await self.osu_client.update_user(osu_user_id, gamemode=user.osu_gamemode)
+            if not (scores := update_info.newhs):
+                continue
+            print(scores)
+
+            for score in scores[:3]:
+                channel_ids = [channel.id for channel in channels if channel.pp_cutoff < int(score.pp)]
+                embed = (await create_new_hiscore_embed(score, update_info.dict(exclude={'newhs'})))
+                result.append((channel_ids, embed))
+
+        return result

@@ -9,13 +9,15 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from config import config
-from osu.api import (RippleClient, RippleRelaxClient, DirectClient, AkatsukiClient, GatariClient, AkatsukiRelaxClient)
+from osu.api import (RippleClient, RippleRelaxClient, DirectClient, AkatsukiClient, GatariClient, AkatsukiRelaxClient,
+                     OsutrackClient)
 from osu.osu_helper import OsuHelper, OsuClient
 
 
-class OsuCog(commands.Cog):
+class BaseCogGroup(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        super().__init__()
 
         self._bancho_client = Client(client_id=config.osu_client_id.get_secret_value(),
                                      client_secret=config.osu_client_secret.get_secret_value())
@@ -25,6 +27,7 @@ class OsuCog(commands.Cog):
         self._akatsukirx_client = AkatsukiRelaxClient()
         self._gatari_client = GatariClient()
         self._direct_client = DirectClient()
+        self._osutrack_client = OsutrackClient()
 
         self.api_client_map = {
             'bancho': self._bancho_client,
@@ -34,15 +37,34 @@ class OsuCog(commands.Cog):
             'akatsukirx': self._akatsukirx_client,
             'gatari': self._gatari_client,
             'direct': self._direct_client,
+            'osutrack': self._osutrack_client,
         }
 
         self.osu_helper = OsuHelper(OsuClient(self.api_client_map))
 
+    @staticmethod
+    async def return_embed_or_string(response: discord.Embed | str, interaction: discord.Interaction) -> None:
+        if isinstance(response, discord.Embed):
+            await interaction.followup.send(embed=response, ephemeral=True)
+        else:
+            await interaction.followup.send(content=response, ephemeral=True)
+
+    async def cog_app_command_error(self, interaction: discord.Interaction,
+                                    error: app_commands.AppCommandError):
+        await interaction.followup.send('Something went wrong', ephemeral=True)
+        print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
+
+
+# noinspection PyUnresolvedReferences
+class OsuGroup(BaseCogGroup, name='osu'):
+    def __init__(self, bot: commands.Bot) -> None:
+        super().__init__(bot)
+
     #  ---------------- user info related ----------------
-    @commands.hybrid_command(name='link', aliases=['osuset'])
-    async def osu_link(
+    @app_commands.command(name='link')
+    async def ink(
             self,
-            ctx: commands.Context[commands.Bot],
+            interaction: discord.Interaction,
             username: str) -> None:
         """
         Link user to an osu profile
@@ -51,16 +73,17 @@ class OsuCog(commands.Cog):
         username: str
             player's username
         """
+        await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_user_link(session, username=username, discord_id=ctx.author.id)
+            resp = await self.osu_helper.process_user_link(session, username=username, discord_id=interaction.user.id)
 
-        await ctx.send(resp, ephemeral=True)
+        await interaction.followup.send(content=resp, ephemeral=True)
 
-    @commands.hybrid_command(name='recent', aliases=['rs', ])
-    async def osu_recent(
+    @app_commands.command(name='recent')
+    async def recent(
             self,
-            ctx: commands.Context[commands.Bot],
-            username: str | None = None,
+            interaction: discord.Interaction,
+            username: str = None,
             limit: app_commands.Range[int, 0, 5] = 1,
             server: str = 'bancho') -> None:
         """
@@ -74,15 +97,17 @@ class OsuCog(commands.Cog):
         server: str
           preferred server
         """
+        await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
             resp = await self.osu_helper.process_recent_scores(session, username=username, limit=limit,
-                                                               discord_id=ctx.author.id, server=server)
+                                                               discord_id=interaction.user.id, server=server)
 
-        await self.return_embed_or_string(resp, ctx)
+        await self.return_embed_or_string(resp, interaction)
 
     @commands.hybrid_command(name='osu')
-    async def osu_info(
-            self, ctx: commands.Context[commands.Bot],
+    async def info(
+            self,
+            interaction: discord.Interaction,
             username: str = None,
             gamemode: Gamemode = Gamemode.STANDARD,
             server: str = 'bancho', detailed: bool = False) -> None:
@@ -99,15 +124,15 @@ class OsuCog(commands.Cog):
         server: str
             preferred server
         """
-        await ctx.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_user_info(session, username=username, discord_id=ctx.author.id,
+            resp = await self.osu_helper.process_user_info(session, username=username, discord_id=interaction.user.id,
                                                            gamemode=gamemode, detailed=detailed, server=server)
 
-            await self.return_embed_or_string(resp, ctx)
+            await self.return_embed_or_string(resp, interaction)
 
-    @osu_info.autocomplete('server')
-    @osu_recent.autocomplete('server')
+    @info.autocomplete('server')
+    @recent.autocomplete('server')
     async def server_autocomplete(
             self,
             interaction: discord.Interaction,
@@ -116,34 +141,82 @@ class OsuCog(commands.Cog):
         return [app_commands.Choice(name=option, value=option) for option in options if
                 option.lower().startswith(current.lower())][:25]
 
-    # ---------------- user tracking related ----------------
-    # ping user: "<@{uid}>"
-    @commands.hybrid_command(name='register')
+
+# noinspection PyUnresolvedReferences
+class TrackingGroup(BaseCogGroup, name='tracking'):
+    def __init__(self, bot: commands.Bot) -> None:
+        super().__init__(bot)
+        self.poll_tracked_users.start()
+
+    @app_commands.command(name='enable')
+    async def enable_tracking(self, interaction: discord.Interaction):
+        """
+        placeholder
+        """
+        await interaction.response.defer(ephemeral=True)
+        async with self.bot.sessionmanager.session() as session:
+            resp = await self.osu_helper.process_tracking_enable(session, channel=interaction.channel)
+
+        await interaction.followup.send(content=resp, ephemeral=True)
+
+    @app_commands.command(name='disable')
+    async def disable_tracking(self, interaction: discord.Interaction):
+        """
+        placeholder
+        """
+        await interaction.response.defer(ephemeral=True)
+        async with self.bot.sessionmanager.session() as session:
+            resp = await self.osu_helper.process_tracking_disable(session, channel=interaction.channel)
+
+        await interaction.followup.send(content=resp, ephemeral=True)
+
+    @app_commands.command(name='register')
     async def register_user(
             self,
-            ctx: commands.Context, username: str = '',
-            gamemode: Gamemode = Gamemode.STANDARD
+            interaction: discord.Interaction,
+            user: discord.User = None
     ) -> None:
         """
-
+        placeholder
         """
-        ...
+        await interaction.response.defer(ephemeral=True)
+        if not user:
+            user = interaction.user
+        async with self.bot.sessionmanager.session() as session:
+            resp = await self.osu_helper.process_tracking_register(session, discord_id=user.id,
+                                                                   channel=interaction.channel, )
 
-    @tasks.loop(minutes=5)
+        await interaction.followup.send(content=resp, ephemeral=True)
+
+    @app_commands.command(name='link')
+    async def link_user(
+            self,
+            interaction: discord.Interaction,
+            username: str = None,
+            gamemode: Gamemode = Gamemode.STANDARD,
+    ) -> None:
+        """
+        placeholder
+        """
+        await interaction.response.defer(ephemeral=True)
+        async with self.bot.sessionmanager.session() as session:
+            resp = await self.osu_helper.process_tracking_link(session, discord_id=interaction.user.id,
+                                                               username=username, gamemode=gamemode)
+
+        await interaction.followup.send(content=resp, ephemeral=True)
+
+    @tasks.loop(minutes=10)
     async def poll_tracked_users(self):
-        ...
+        print(10)
+        async with self.bot.sessionmanager.session() as session:
+            tracked_users = await self.osu_helper.process_tracked_users(session)
+        print(tracked_users)
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send('Something went wrong', ephemeral=True)
+    @poll_tracked_users.error
+    async def error_handler(self, error: Exception):
         print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
-
-    @staticmethod
-    async def return_embed_or_string(response: discord.Embed | str, ctx: commands.Context) -> None:
-        if isinstance(response, discord.Embed):
-            await ctx.send(embed=response, ephemeral=True)
-        else:
-            await ctx.send(response, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(OsuCog(bot))
+    await bot.add_cog(OsuGroup(bot))
+    await bot.add_cog(TrackingGroup(bot))

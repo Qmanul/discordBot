@@ -6,6 +6,50 @@ from typing import List, Optional
 from . import BaseModel
 
 
+class OsutrackNewHiscore(BaseModel):
+    beatmap_id: int
+    score_id: int
+    score: int
+    maxcombo: int
+    count50: int
+    count100: int
+    count300: int
+    countmiss: int
+    countkatu: int
+    countgeki: int
+    perfect: int
+    enabled_mods: int
+    is_classic: int
+    user_id: int
+    date: datetime
+    rank: str
+    pp: float
+    replay_available: int
+    ranking: int
+
+
+class OsutrackUser(BaseModel):
+    username: str
+    mode: int
+    playcount: int
+    pp_rank: int
+    pp_raw: float
+    accuracy: float
+    total_score: int
+    ranked_score: int
+    count300: int
+    count50: int
+    count100: int
+    level: float
+    count_rank_a: int
+    count_rank_s: int
+    count_rank_ss: int
+    levelup: bool
+    first: bool
+    _exists: bool
+    newhs: List[OsutrackNewHiscore]
+
+
 class RippleUser(BaseModel):
     code: int
     id: int
