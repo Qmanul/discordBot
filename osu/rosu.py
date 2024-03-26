@@ -29,6 +29,13 @@ async def get_score_performance(
     return pp, fc_pp
 
 
+async def get_score_calc(filepath, score):
+    beatmap = rosu_pp_py.Beatmap(path=filepath)
+    statistics = await get_score_statistics(score)
+
+    return rosu_pp_py.Calculator(**statistics).performance(beatmap)
+
+
 async def get_score_statistics(
         score: aiosu.models.Score | RippleScoreUser | GatariScore
 ) -> dict[str, int]:
