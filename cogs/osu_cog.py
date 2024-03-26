@@ -205,12 +205,12 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
 
         await interaction.followup.send(content=resp, ephemeral=True)
 
-    @tasks.loop(minutes=10)
+    @tasks.loop(minutes=1)
     async def poll_tracked_users(self):
-        print(10)
         async with self.bot.sessionmanager.session() as session:
-            tracked_users = await self.osu_helper.process_tracked_users(session)
-        print(tracked_users)
+            async for item in self.osu_helper.process_tracked_users(session):
+                for channel_id in item[0]:
+                    await self.bot.get_channel(channel_id).send(embed=item[1])
 
     @poll_tracked_users.error
     async def error_handler(self, error: Exception):

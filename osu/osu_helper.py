@@ -75,7 +75,6 @@ class OsuClient:
 
     async def get_score(self, score_id, gamemode, **kwargs) -> aiosu.models.Score:
         async with self.api_client_map['bancho'] as client:
-            print(score_id, gamemode)
             return await client.get_score(score_id, gamemode, **kwargs)
 
 
@@ -209,7 +208,6 @@ class OsuHelper:
         return f'Successfully disabled tracking in channel **{channel.name}**'
 
     async def process_tracked_users(self, session: AsyncSession):
-        result = []
         tracked_users = await tracking_crud.get_users(session)
         for user in tracked_users:
             if not ((osu_user_id := user.osu_user_id) and (channels := user.tracked_channels)):
@@ -218,11 +216,8 @@ class OsuHelper:
             update_info = await self.osu_client.update_user(osu_user_id, gamemode=user.osu_gamemode)
             if not (scores := update_info.newhs):
                 continue
-            print(scores)
 
             for score in scores[:3]:
                 channel_ids = [channel.id for channel in channels if channel.pp_cutoff < int(score.pp)]
                 embed = (await create_new_hiscore_embed(score, update_info.dict(exclude={'newhs'})))
-                result.append((channel_ids, embed))
-
-        return result
+                yield channel_ids, embed
