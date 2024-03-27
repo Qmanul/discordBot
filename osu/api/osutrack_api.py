@@ -22,16 +22,16 @@ class OsutrackClient(BaseClient):
 
     async def update_user(self, user_id: int, **kwargs):
         url = self.base_url.format('update')
-        params: [str, object] = {
+        params: dict[str, object] = {
             'user': user_id,
             'mode': Gamemode(kwargs.pop('gamemode', Gamemode.STANDARD)).id
         }
         json = await self._request('POST', url, params=params)
-        return OsutrackUser.validate(json)
+        return OsutrackUser.model_validate(json)
 
     async def get_user_best_rank_and_accuracy(self, user_id: int, **kwargs):
         url = self.base_url.format('peak')
-        params: [str, object] = {
+        params: dict[str, object] = {
             'user': user_id,
             'mode': Gamemode(kwargs.pop('gamemode', Gamemode.STANDARD)).id
         }

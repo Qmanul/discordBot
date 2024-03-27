@@ -8,3 +8,4 @@
 /.idea/
 **/*_test.py
 osu/beatmaps/
+*.pyc

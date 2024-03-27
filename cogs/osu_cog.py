@@ -18,9 +18,8 @@ class BaseCogGroup(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         super().__init__()
-
         self._bancho_client = Client(client_id=config.osu_client_id.get_secret_value(),
-                                     client_secret=config.osu_client_secret.get_secret_value())
+                                     client_secret=config.osu_client_secret.get_secret_value(), )
         self._ripple_client = RippleClient(token=config.ripple_token.get_secret_value())
         self._ripplerx_client = RippleRelaxClient(token=config.ripple_token.get_secret_value())
         self._akatsuki_client = AkatsukiClient()
@@ -62,7 +61,7 @@ class OsuGroup(BaseCogGroup, name='osu'):
 
     #  ---------------- user info related ----------------
     @app_commands.command(name='link')
-    async def ink(
+    async def link(
             self,
             interaction: discord.Interaction,
             username: str) -> None:
@@ -209,8 +208,11 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
     async def poll_tracked_users(self):
         async with self.bot.sessionmanager.session() as session:
             async for item in self.osu_helper.process_tracked_users(session):
-                for channel_id in item[0]:
-                    await self.bot.get_channel(channel_id).send(embed=item[1])
+                try:
+                    for channel_id in item[0]:
+                        await self.bot.get_channel(channel_id).send(embed=item[1])
+                except TypeError:
+                    continue
 
     @poll_tracked_users.error
     async def error_handler(self, error: Exception):

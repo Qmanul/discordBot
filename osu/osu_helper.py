@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import os.path
+from random import choice
 from typing import List
 
 import aiosu
@@ -64,7 +66,7 @@ class OsuClient:
         if await path_exists(filepath):
             return filepath
 
-        async with self.api_client_map['direct'] as client:
+        async with self.api_client_map[choice(['nerinyan', 'direct'])] as client:
             await extract_osu_from_osz_bytes(await client.get_beatmapset_file(beatmap.beatmapset_id))
 
         return filepath
@@ -184,13 +186,18 @@ class OsuHelper:
 
         return f'Successfully linked <@{discord_id}> to **{user_info.username}**'
 
-    async def process_tracking_register(self, session: AsyncSession, discord_id: int, channel: discord.TextChannel):
+    async def process_tracking_register(
+            self,
+            session: AsyncSession,
+            discord_id: int,
+            channel: discord.TextChannel
+    ) -> str:
         try:
             await tracking_crud.register_user(session, discord_id, channel.id)
         except ValueError:
             return f'Tracking is not enabled in **{channel.name}**'
 
-        return f'Successfully registered <@{discord_id}> in channel {channel.name}'
+        return f'Successfully registered <@{discord_id}> in channel **{channel.name}**'
 
     async def process_tracking_enable(self, session: AsyncSession, channel: discord.TextChannel):
         if await tracking_crud.get_channel(session, channel_id=channel.id):
@@ -208,16 +215,19 @@ class OsuHelper:
         return f'Successfully disabled tracking in channel **{channel.name}**'
 
     async def process_tracked_users(self, session: AsyncSession):
-        tracked_users = await tracking_crud.get_users(session)
-        for user in tracked_users:
+        async def dummy(user):
             if not ((osu_user_id := user.osu_user_id) and (channels := user.tracked_channels)):
-                continue
+                return
 
             update_info = await self.osu_client.update_user(osu_user_id, gamemode=user.osu_gamemode)
             if not (scores := update_info.newhs):
-                continue
+                return
 
             for score in scores[:3]:
                 channel_ids = [channel.id for channel in channels if channel.pp_cutoff < int(score.pp)]
                 embed = (await create_new_hiscore_embed(score, update_info.dict(exclude={'newhs'})))
-                yield channel_ids, embed
+                return channel_ids, embed
+
+        tracked_users = await tracking_crud.get_users(session)
+        for completed in asyncio.as_completed(map(dummy, tracked_users)):
+            yield await completed

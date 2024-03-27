@@ -43,7 +43,7 @@ class GatariClient(BaseClient):
         if not (stats := json.pop('stats')):
             raise APIException(404, 'user not found')
         stats['user_info'] = await self.get_user_info(user_query)
-        return GatariUser.validate(stats)
+        return GatariUser.model_validate(stats)
 
     async def _get_type_scores(
             self,

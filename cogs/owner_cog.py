@@ -18,6 +18,14 @@ class OwnerCog(commands.Cog):
         synced = await ctx.bot.tree.sync()
         await ctx.send(f"Synced {len(synced)} commands globally")
 
+    @commands.command(name='shutdown', aliases=['stop'])
+    async def shutdown(self, ctx: commands.Context[commands.Bot]) -> None:
+        """
+        bye bye
+        """
+        await ctx.send('Stopping')
+        await self.bot.__aexit__(None, None, None)
+
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         await ctx.send('Something went wrong', ephemeral=True)
         print("".join(traceback.format_exception(type(error), error, error.__traceback__)))

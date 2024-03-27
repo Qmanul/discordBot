@@ -16,7 +16,7 @@ class NerinyanClient(BaseClient):
 
     async def download_beatmapset(self, beatmapset_id: int, **kwargs) -> BytesIO:
         url = self.base_url.format(f'd/{beatmapset_id}')
-        params: [str, object] = {
+        params: dict[str, object] = {
             'nh': kwargs.pop('no_hitsound', True),
             'nsb': kwargs.pop('no_storyboard', True),
             'nb': kwargs.pop('no_background', True),

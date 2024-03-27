@@ -18,13 +18,13 @@ class DirectClient(BaseClient):
             "Accept": "application/octet-stream",
         }
 
-    async def get_beatmap_file(self, beatmap_id, **kwargs) -> str:
+    async def download_beatmap(self, beatmap_id, **kwargs) -> str:
         url = self.base_url.format(f'osu/{beatmap_id}')
-        params: [str, object] = {}
+        params: dict[str, object] = {}
         add_param(params, kwargs, 'raw')
         return await self._request('GET', url, params=params)
 
-    async def get_beatmapset_file(self, beatmapset_id: int) -> BytesIO:
+    async def download_beatmapset(self, beatmapset_id: int) -> BytesIO:
         url = self.base_url.format(f'd/{beatmapset_id}')
         return await self._request('GET', url)
 
