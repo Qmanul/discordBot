@@ -8,7 +8,7 @@ import aiofiles
 from aiofiles import os
 
 
-async def extract_osu_from_osz_bytes(b: BytesIO) -> bool:
+async def extract_maps_from_osz_bytes(b: BytesIO) -> bool:
     with zipfile.ZipFile(b) as r:
         for i in r.infolist():
             if not i.filename.endswith('.osu'):

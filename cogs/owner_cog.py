@@ -24,7 +24,7 @@ class OwnerCog(commands.Cog):
         bye bye
         """
         await ctx.send('Stopping')
-        await self.bot.__aexit__(None, None, None)
+        await self.bot.close()
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         await ctx.send('Something went wrong', ephemeral=True)

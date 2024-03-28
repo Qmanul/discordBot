@@ -11,35 +11,15 @@ from discord.ext import commands, tasks
 from config import config
 from osu.api import (RippleClient, RippleRelaxClient, DirectClient, AkatsukiClient, GatariClient, AkatsukiRelaxClient,
                      OsutrackClient)
-from osu.osu_helper import OsuHelper, OsuClient
+from osu.api.rdr_api import OrdrClient
+from osu.osu_helper import OsuHelper, OsuClient, RenderHelper, TrackingHelper
 
+devmode = True
 
 class BaseCogGroup(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         super().__init__()
-        self._bancho_client = Client(client_id=config.osu_client_id.get_secret_value(),
-                                     client_secret=config.osu_client_secret.get_secret_value(), )
-        self._ripple_client = RippleClient(token=config.ripple_token.get_secret_value())
-        self._ripplerx_client = RippleRelaxClient(token=config.ripple_token.get_secret_value())
-        self._akatsuki_client = AkatsukiClient()
-        self._akatsukirx_client = AkatsukiRelaxClient()
-        self._gatari_client = GatariClient()
-        self._direct_client = DirectClient()
-        self._osutrack_client = OsutrackClient()
-
-        self.api_client_map = {
-            'bancho': self._bancho_client,
-            'ripple': self._ripple_client,
-            'ripplerx': self._ripplerx_client,
-            'akatsuki': self._akatsuki_client,
-            'akatsukirx': self._akatsukirx_client,
-            'gatari': self._gatari_client,
-            'direct': self._direct_client,
-            'osutrack': self._osutrack_client,
-        }
-
-        self.osu_helper = OsuHelper(OsuClient(self.api_client_map))
 
     @staticmethod
     async def return_embed_or_string(response: discord.Embed | str, interaction: discord.Interaction) -> None:
@@ -56,10 +36,10 @@ class BaseCogGroup(commands.GroupCog):
 
 # noinspection PyUnresolvedReferences
 class OsuGroup(BaseCogGroup, name='osu'):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot, helper: OsuHelper) -> None:
         super().__init__(bot)
+        self.helper = helper
 
-    #  ---------------- user info related ----------------
     @app_commands.command(name='link')
     async def link(
             self,
@@ -74,7 +54,7 @@ class OsuGroup(BaseCogGroup, name='osu'):
         """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_user_link(session, username=username, discord_id=interaction.user.id)
+            resp = await self.helper.process_user_link(session, username=username, discord_id=interaction.user.id)
 
         await interaction.followup.send(content=resp, ephemeral=True)
 
@@ -83,7 +63,7 @@ class OsuGroup(BaseCogGroup, name='osu'):
             self,
             interaction: discord.Interaction,
             username: str = None,
-            limit: app_commands.Range[int, 0, 5] = 1,
+            limit: app_commands.Range[int, 1, 5] = 1,
             server: str = 'bancho') -> None:
         """
         get user recent score
@@ -98,18 +78,19 @@ class OsuGroup(BaseCogGroup, name='osu'):
         """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_recent_scores(session, username=username, limit=limit,
-                                                               discord_id=interaction.user.id, server=server)
+            resp = await self.helper.process_recent_scores(session, username=username, limit=limit,
+                                                           discord_id=interaction.user.id, server=server)
 
         await self.return_embed_or_string(resp, interaction)
 
-    @commands.hybrid_command(name='osu')
+    @app_commands.command(name='info')
     async def info(
             self,
             interaction: discord.Interaction,
             username: str = None,
             gamemode: Gamemode = Gamemode.STANDARD,
-            server: str = 'bancho', detailed: bool = False) -> None:
+            server: str = 'bancho',
+    ) -> None:
         """
         get user statistics
         Parameters
@@ -118,15 +99,13 @@ class OsuGroup(BaseCogGroup, name='osu'):
             player's username
         gamemode: str
             preferred gamemode
-        detailed: bool
-            detailed info
         server: str
             preferred server
         """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_user_info(session, username=username, discord_id=interaction.user.id,
-                                                           gamemode=gamemode, detailed=detailed, server=server)
+            resp = await self.helper.process_user_info(session, username=username, discord_id=interaction.user.id,
+                                                       gamemode=gamemode, server=server)
 
             await self.return_embed_or_string(resp, interaction)
 
@@ -143,8 +122,9 @@ class OsuGroup(BaseCogGroup, name='osu'):
 
 # noinspection PyUnresolvedReferences
 class TrackingGroup(BaseCogGroup, name='tracking'):
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot, helper: TrackingHelper) -> None:
         super().__init__(bot)
+        self.helper = helper
         self.poll_tracked_users.start()
 
     @app_commands.command(name='enable')
@@ -154,7 +134,7 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
         """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_tracking_enable(session, channel=interaction.channel)
+            resp = await self.helper.process_tracking_enable(session, channel=interaction.channel)
 
         await interaction.followup.send(content=resp, ephemeral=True)
 
@@ -165,7 +145,7 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
         """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_tracking_disable(session, channel=interaction.channel)
+            resp = await self.helper.process_tracking_disable(session, channel=interaction.channel)
 
         await interaction.followup.send(content=resp, ephemeral=True)
 
@@ -182,8 +162,8 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
         if not user:
             user = interaction.user
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_tracking_register(session, discord_id=user.id,
-                                                                   channel=interaction.channel, )
+            resp = await self.helper.process_tracking_register(session, discord_id=user.id,
+                                                               channel=interaction.channel, )
 
         await interaction.followup.send(content=resp, ephemeral=True)
 
@@ -199,15 +179,15 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
         """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
-            resp = await self.osu_helper.process_tracking_link(session, discord_id=interaction.user.id,
-                                                               username=username, gamemode=gamemode)
+            resp = await self.helper.process_tracking_link(session, discord_id=interaction.user.id,
+                                                           username=username, gamemode=gamemode)
 
         await interaction.followup.send(content=resp, ephemeral=True)
 
     @tasks.loop(minutes=1)
     async def poll_tracked_users(self):
         async with self.bot.sessionmanager.session() as session:
-            async for item in self.osu_helper.process_tracked_users(session):
+            async for item in self.helper.process_tracked_users(session):
                 try:
                     for channel_id in item[0]:
                         await self.bot.get_channel(channel_id).send(embed=item[1])
@@ -219,6 +199,73 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
         print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
 
 
+class RenderGroup(commands.GroupCog, name='render'):
+    def __init__(self, bot: commands.Bot, helper: RenderHelper) -> None:
+        self.bot = bot
+        super().__init__()
+        self.helper = helper
+
+    async def cog_load(self) -> None:
+        await self.helper.ordr_client.set_websocket(self.bot.websocket)
+
+    @app_commands.command(name='replay')
+    async def render(
+            self,
+            interaction: discord.Interaction,
+            replay: discord.Attachment,
+    ):
+        await interaction.response.defer()
+        resp = await self.helper.process_render()
+        await interaction.followup.send('хуй')
+
+
+class InitCog:
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self._bancho_client = Client(client_id=config.osu_client_id.get_secret_value(),
+                                     client_secret=config.osu_client_secret.get_secret_value(), )
+        self._ripple_client = RippleClient(token=config.ripple_token.get_secret_value())
+        self._ripplerx_client = RippleRelaxClient(token=config.ripple_token.get_secret_value())
+        self._akatsuki_client = AkatsukiClient()
+        self._akatsukirx_client = AkatsukiRelaxClient()
+        self._gatari_client = GatariClient()
+        self._direct_client = DirectClient()
+        self._osutrack_client = OsutrackClient()
+        self._ordr_client = OrdrClient(devmode=devmode)
+
+        self.api_client_map = {
+            'bancho': self._bancho_client,
+            'ripple': self._ripple_client,
+            'ripplerx': self._ripplerx_client,
+            'akatsuki': self._akatsuki_client,
+            'akatsukirx': self._akatsukirx_client,
+            'gatari': self._gatari_client,
+            'direct': self._direct_client,
+            'osutrack': self._osutrack_client,
+            'ordr': self._ordr_client,
+        }
+
+        self._osu_client = OsuClient(self.api_client_map)
+        self._osu_helper = OsuHelper(self._osu_client)
+        self._tracing_helper = TrackingHelper(self._osu_client)
+        self._render_helper = RenderHelper(self._ordr_client)
+
+    async def aclose(self):
+        for client in self.api_client_map.values():
+            await client.aclose()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.aclose()
+
+    async def load_cogs(self) -> None:
+        await self.bot.add_cog(OsuGroup(self.bot, self._osu_helper))
+        await self.bot.add_cog(TrackingGroup(self.bot, self._tracing_helper))
+        await self.bot.add_cog(RenderGroup(self.bot, self._render_helper))
+
+
 async def setup(bot: commands.Bot):
-    await bot.add_cog(OsuGroup(bot))
-    await bot.add_cog(TrackingGroup(bot))
+    async with InitCog(bot) as init:
+        await init.load_cogs()

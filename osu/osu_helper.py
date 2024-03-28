@@ -13,9 +13,10 @@ from crud import osu_user_crud
 from crud import tracking_crud
 from osu.api.models.score import GatariScore, RippleScoreUser
 from osu.api.models.user import GatariUser, RippleUserFull, OsutrackUser
+from osu.api.rdr_api import OrdrClient
 from osu.osu_embed import create_user_info_embed, create_score_embed, create_new_hiscore_embed
 from osu.rosu import get_score_performance
-from utils.file_utils import path_exists, extract_osu_from_osz_bytes
+from utils.file_utils import path_exists, extract_maps_from_osz_bytes
 
 
 class OsuClient:
@@ -67,7 +68,7 @@ class OsuClient:
             return filepath
 
         async with self.api_client_map[choice(['nerinyan', 'direct'])] as client:
-            await extract_osu_from_osz_bytes(await client.get_beatmapset_file(beatmap.beatmapset_id))
+            await extract_maps_from_osz_bytes(await client.download_betmapset(beatmap.beatmapset_id))
 
         return filepath
 
@@ -156,6 +157,19 @@ class OsuHelper:
 
         return await create_user_info_embed(user_info, gamemode=gamemode, **kwargs)
 
+
+class RenderHelper:
+    def __init__(self, ordr_client: OrdrClient) -> None:
+        self.ordr_client = ordr_client
+
+    async def process_render(self, ):
+        return
+
+
+class TrackingHelper:
+    def __init__(self, osu_client: OsuClient):
+        self.osu_client = osu_client
+
     async def process_tracking_link(self, session, discord_id: int, **kwargs):
         username = kwargs.pop('username', None)
         gamemode = kwargs.pop('gamemode', None)
@@ -215,7 +229,7 @@ class OsuHelper:
         return f'Successfully disabled tracking in channel **{channel.name}**'
 
     async def process_tracked_users(self, session: AsyncSession):
-        async def dummy(user):
+        async def process_user(user):
             if not ((osu_user_id := user.osu_user_id) and (channels := user.tracked_channels)):
                 return
 
@@ -229,5 +243,5 @@ class OsuHelper:
                 return channel_ids, embed
 
         tracked_users = await tracking_crud.get_users(session)
-        for completed in asyncio.as_completed(map(dummy, tracked_users)):
+        for completed in asyncio.as_completed(map(process_user, tracked_users)):
             yield await completed

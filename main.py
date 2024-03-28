@@ -31,7 +31,6 @@ class OsuBot(commands.Bot):
     async def setup_hook(self) -> None:
         for extension in self.init_extensions:
             await self.load_extension(extension)
-        await self.websocket.connect('https://apis.issou.best', socketio_path='/ordr/ws')
 
 
 async def main():
