@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.base_crud import update_model, get_model_by_id
 from database.models import TrackedUserModel, TrackedChannelModel
+from database.models.tracking_models import TrackedGuildModel
 
 
 async def register_user(db_session: AsyncSession, user_id, channel_id, **kwargs) -> None:
@@ -57,3 +58,8 @@ async def remove_tracked_channel(db_session: AsyncSession, channel_id: int):
 
     await db_session.delete(channel)
     await db_session.commit()
+
+
+# ------ channel part ------
+async def get_guild(db_session: AsyncSession, guild_id: int) -> TrackedGuildModel:
+    return await get_model_by_id(db_session, guild_id, TrackedGuildModel)

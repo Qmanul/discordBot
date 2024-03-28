@@ -16,6 +16,7 @@ from osu.osu_helper import OsuHelper, OsuClient, RenderHelper, TrackingHelper
 
 devmode = True
 
+
 class BaseCogGroup(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -219,7 +220,7 @@ class RenderGroup(commands.GroupCog, name='render'):
         await interaction.followup.send('хуй')
 
 
-class InitCog:
+class InitCogs:
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._bancho_client = Client(client_id=config.osu_client_id.get_secret_value(),
@@ -247,7 +248,7 @@ class InitCog:
 
         self._osu_client = OsuClient(self.api_client_map)
         self._osu_helper = OsuHelper(self._osu_client)
-        self._tracing_helper = TrackingHelper(self._osu_client)
+        self._tracking_helper = TrackingHelper(self._osu_client)
         self._render_helper = RenderHelper(self._ordr_client)
 
     async def aclose(self):
@@ -262,10 +263,10 @@ class InitCog:
 
     async def load_cogs(self) -> None:
         await self.bot.add_cog(OsuGroup(self.bot, self._osu_helper))
-        await self.bot.add_cog(TrackingGroup(self.bot, self._tracing_helper))
+        await self.bot.add_cog(TrackingGroup(self.bot, self._tracking_helper))
         await self.bot.add_cog(RenderGroup(self.bot, self._render_helper))
 
 
 async def setup(bot: commands.Bot):
-    async with InitCog(bot) as init:
+    async with InitCogs(bot) as init:
         await init.load_cogs()

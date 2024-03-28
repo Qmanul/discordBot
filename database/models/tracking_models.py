@@ -34,4 +34,4 @@ class TrackedGuildModel(Base):
     __tablename__ = 'tracked_guilds'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True, unique=True, )
-    tracked_channels: Mapped[List[TrackedChannelModel]] = relationship(lazy='joined')
+    tracked_channels: Mapped[List[TrackedChannelModel]] = relationship(lazy='joined', cascade='all, delete')
