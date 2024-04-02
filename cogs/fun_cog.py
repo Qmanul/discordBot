@@ -20,7 +20,7 @@ class FunCog(commands.GroupCog, name='fun'):
 
         animated, name, id = emoji.strip('<>').split(':')
         name = custom_name if custom_name else name
-        extension = 'webp' if animated else 'gif'
+        extension = 'gif' if animated else 'webp'
         async with self.bot.session.get(self.emoji_url.format(id=id, extension=extension)) as resp:
             emoji = await interaction.guild.create_custom_emoji(name=name, image=await resp.read())
 
