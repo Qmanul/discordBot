@@ -9,7 +9,6 @@ from discord.ext import commands
 
 from config import config
 from database.database import DatabaseSessionManager
-from osu.api.rdr_api import OrdrSocketClient
 
 
 class OsuBot(commands.Bot):
@@ -22,7 +21,6 @@ class OsuBot(commands.Bot):
         self.web_client = web_client
         self.init_extensions = init_extensions
         self.sessionmanager = DatabaseSessionManager(config.osu_db_url.get_secret_value())
-        self.websocket = kwargs.pop('websocket', None)
 
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
@@ -34,7 +32,7 @@ class OsuBot(commands.Bot):
 
 
 async def main():
-    async with ClientSession() as client, OrdrSocketClient() as ws:
+    async with ClientSession() as client:
         exts = [f'cogs.{file[:-3]}' for file in os.listdir(os.path.join(os.getcwd(), 'cogs')) if
                 file.endswith('_cog.py')]
         intents = discord.Intents.all()
@@ -43,7 +41,6 @@ async def main():
                 init_extensions=exts,
                 intents=intents,
                 command_prefix='$',
-                websocket=ws,
         ) as bot:
             await bot.start(config.discord_bot_token.get_secret_value())
 

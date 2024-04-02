@@ -13,7 +13,6 @@ from crud import osu_user_crud
 from crud import tracking_crud
 from osu.api.models.score import GatariScore, RippleScoreUser
 from osu.api.models.user import GatariUser, RippleUserFull, OsutrackUser
-from osu.api.rdr_api import OrdrClient
 from osu.osu_embed import create_user_info_embed, create_score_embed, create_new_hiscore_embed
 from osu.rosu import get_score_performance
 from utils.file_utils import path_exists, extract_maps_from_osz_bytes
@@ -156,14 +155,6 @@ class OsuHelper:
             return f'{username} was not found'
 
         return await create_user_info_embed(user_info, gamemode=gamemode, **kwargs)
-
-
-class RenderHelper:
-    def __init__(self, ordr_client: OrdrClient) -> None:
-        self.ordr_client = ordr_client
-
-    async def process_render(self, ):
-        return
 
 
 class TrackingHelper:

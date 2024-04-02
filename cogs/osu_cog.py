@@ -3,6 +3,7 @@ from __future__ import annotations
 import traceback
 
 import discord
+from aiordr import ordrClient
 from aiosu.models import Gamemode
 from aiosu.v2 import Client
 from discord import app_commands
@@ -11,10 +12,8 @@ from discord.ext import commands, tasks
 from config import config
 from osu.api import (RippleClient, RippleRelaxClient, DirectClient, AkatsukiClient, GatariClient, AkatsukiRelaxClient,
                      OsutrackClient)
-from osu.api.rdr_api import OrdrClient
-from osu.osu_helper import OsuHelper, OsuClient, RenderHelper, TrackingHelper
-
-devmode = True
+from osu.osu_helper import OsuHelper, OsuClient, TrackingHelper
+from osu.render.render_helper import RenderHelper
 
 
 class BaseCogGroup(commands.GroupCog):
@@ -207,7 +206,7 @@ class RenderGroup(commands.GroupCog, name='render'):
         self.helper = helper
 
     async def cog_load(self) -> None:
-        await self.helper.ordr_client.set_websocket(self.bot.websocket)
+        await self.helper.client.connect()
 
     @app_commands.command(name='replay')
     async def render(
@@ -216,8 +215,7 @@ class RenderGroup(commands.GroupCog, name='render'):
             replay: discord.Attachment,
     ):
         await interaction.response.defer()
-        resp = await self.helper.process_render()
-        await interaction.followup.send('хуй')
+        await self.helper.process_render(replay, interaction)
 
 
 class InitCogs:
@@ -232,7 +230,7 @@ class InitCogs:
         self._gatari_client = GatariClient()
         self._direct_client = DirectClient()
         self._osutrack_client = OsutrackClient()
-        self._ordr_client = OrdrClient(devmode=devmode)
+        self._ordr_client = ordrClient()
 
         self.api_client_map = {
             'bancho': self._bancho_client,
@@ -251,16 +249,6 @@ class InitCogs:
         self._tracking_helper = TrackingHelper(self._osu_client)
         self._render_helper = RenderHelper(self._ordr_client)
 
-    async def aclose(self):
-        for client in self.api_client_map.values():
-            await client.aclose()
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.aclose()
-
     async def load_cogs(self) -> None:
         await self.bot.add_cog(OsuGroup(self.bot, self._osu_helper))
         await self.bot.add_cog(TrackingGroup(self.bot, self._tracking_helper))
@@ -268,5 +256,5 @@ class InitCogs:
 
 
 async def setup(bot: commands.Bot):
-    async with InitCogs(bot) as init:
-        await init.load_cogs()
+    init = InitCogs(bot)
+    await init.load_cogs()
