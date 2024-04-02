@@ -230,7 +230,7 @@ class TrackingHelper:
 
             for score in scores[:3]:
                 channel_ids = [channel.id for channel in channels if channel.pp_cutoff < int(score.pp)]
-                embed = (await create_new_hiscore_embed(score, update_info.dict(exclude={'newhs'})))
+                embed = await create_new_hiscore_embed(score, update_info.dict(exclude={'newhs'}))
                 return channel_ids, embed
 
         tracked_users = await tracking_crud.get_users(session)

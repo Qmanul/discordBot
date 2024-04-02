@@ -46,6 +46,7 @@ class RenderHelper:
             return await inter.edit_original_response(content=f'Incorrect replay file')
 
         await inter.edit_original_response(content=f'Requesting render')
+
         try:
             resp = await self.client.create_render(
                 username=RENDER_NAME,
@@ -55,6 +56,7 @@ class RenderHelper:
             )
             await inter.edit_original_response(content=resp.message)
             self.queue[resp.render_id] = RenderOngoing(inter)
+
         except APIException:
             await inter.edit_original_response(content='Something went wrong')
 
