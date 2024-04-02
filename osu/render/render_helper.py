@@ -16,7 +16,7 @@ class RenderHelper:
         async def render_fail(event: RenderFailEvent):
             try:
                 render: RenderOngoing = self.queue.pop(event.render_id)
-                await render.update_progress('failed')
+                await render.update_progress(f'failed, {event.error_message}')
             except KeyError:
                 pass
 
