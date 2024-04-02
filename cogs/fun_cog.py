@@ -26,6 +26,15 @@ class FunCog(commands.GroupCog, name='fun'):
 
         await interaction.edit_original_response(content=f"Added emoji: {emoji}")
 
+    @app_commands.command(name='get_avatar')
+    async def ger_avatar(self, interaction: discord.Interaction, user: discord.User = None):
+        await interaction.response.defer()
+        if not user:
+            user = interaction.user
+
+        return await interaction.edit_original_response(
+            embed=discord.Embed(title=f'{user.name} avatar').set_image(url=user.display_avatar.url))
+
     async def cog_app_command_error(self, interaction: discord.Interaction,
                                     error: app_commands.AppCommandError):
         await interaction.followup.send('Something went wrong', ephemeral=True)
