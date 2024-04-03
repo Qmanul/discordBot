@@ -2,7 +2,7 @@ import traceback
 
 from discord.ext import commands
 
-from config import config
+from constants import MAIN_GUILD_ID
 
 
 class OwnerCog(commands.Cog):
@@ -10,7 +10,7 @@ class OwnerCog(commands.Cog):
         self.bot = bot
 
     async def cog_check(self, ctx: commands.Context[commands.Bot]) -> bool:
-        check = str(ctx.guild.id) == config.testing_guild_id.get_secret_value() and await self.bot.is_owner(ctx.author)
+        check = str(ctx.guild.id) == MAIN_GUILD_ID and await self.bot.is_owner(ctx.author)
         return check
 
     @commands.command(aliases=['st', ])

@@ -1,9 +1,10 @@
 from typing import Sequence
 
+import sqlalchemy.exc
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crud.base_crud import update_model, get_model_by_id
+from crud.base_crud import update_model, get_model_by_id, delete_model_by_id
 from database.models import TrackedUserModel, TrackedChannelModel
 from database.models.tracking_models import TrackedGuildModel
 
@@ -43,6 +44,19 @@ async def get_channel(db_session: AsyncSession, channel_id: int, ) -> TrackedCha
     return await get_model_by_id(db_session, channel_id, TrackedChannelModel)
 
 
+async def insert_channel(db_session: AsyncSession, channel_id: int, guild_id: int, **kwargs) -> TrackedChannelModel:
+    channel = TrackedChannelModel(id=channel_id, pp_cutoff=kwargs.pop('pp_cutoff', 0), guild_id=guild_id)
+
+    try:
+        return await update_model(db_session, channel)
+    except sqlalchemy.exc.IntegrityError:
+        # this shouldn't happen in the first place, but oh well
+        await db_session.rollback()
+        guild = TrackedGuildModel(id=guild_id)
+        await update_model(db_session, guild)
+        return await update_model(db_session, channel)
+
+
 async def create_or_update_channel(db_session: AsyncSession, channel_id: int, **kwargs) -> TrackedChannelModel:
     if channel := await get_channel(db_session, channel_id):
         channel.pp_cutoff = kwargs.pop('pp_cutoff', channel.pp_cutoff)
@@ -52,14 +66,19 @@ async def create_or_update_channel(db_session: AsyncSession, channel_id: int, **
     return await update_model(db_session, channel)
 
 
-async def remove_tracked_channel(db_session: AsyncSession, channel_id: int):
-    if not (channel := await get_channel(db_session, channel_id)):
-        raise ValueError
-
-    await db_session.delete(channel)
-    await db_session.commit()
+async def delete_channel(db_session: AsyncSession, channel_id: int):
+    await delete_model_by_id(db_session, channel_id, TrackedChannelModel)
 
 
 # ------ channel part ------
 async def get_guild(db_session: AsyncSession, guild_id: int) -> TrackedGuildModel:
     return await get_model_by_id(db_session, guild_id, TrackedGuildModel)
+
+
+async def insert_guild(db_session: AsyncSession, guild_id: int) -> TrackedGuildModel:
+    guild = TrackedGuildModel(id=guild_id)
+    return await update_model(db_session, guild)
+
+
+async def delete_guild(db_session: AsyncSession, guild_id: int):
+    await delete_model_by_id(db_session, guild_id, TrackedGuildModel)

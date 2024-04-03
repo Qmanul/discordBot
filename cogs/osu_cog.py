@@ -12,8 +12,7 @@ from discord.ext import commands, tasks
 from config import config
 from osu.api import (RippleClient, RippleRelaxClient, DirectClient, AkatsukiClient, GatariClient, AkatsukiRelaxClient,
                      OsutrackClient)
-from osu.osu_helper import OsuHelper, OsuClient, TrackingHelper
-from osu.render.render_helper import RenderHelper
+from osu.helpers import RenderHelper, TrackingHelper, OsuHelper, ApiHelper
 
 
 class BaseCogGroup(commands.GroupCog):
@@ -244,9 +243,9 @@ class InitCogs:
             'ordr': self._ordr_client,
         }
 
-        self._osu_client = OsuClient(self.api_client_map)
-        self._osu_helper = OsuHelper(self._osu_client)
-        self._tracking_helper = TrackingHelper(self._osu_client)
+        self._api_helper = ApiHelper(self.api_client_map)
+        self._osu_helper = OsuHelper(self._api_helper)
+        self._tracking_helper = TrackingHelper(self._api_helper)
         self._render_helper = RenderHelper(self._ordr_client)
 
     async def load_cogs(self) -> None:

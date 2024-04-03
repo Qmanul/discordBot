@@ -8,8 +8,8 @@ from . import Base
 user_channel = Table(
     "user_channel",
     Base.metadata,
-    Column("channel_id", ForeignKey("tracked_channels.id"), ),
-    Column("user_id", ForeignKey("tracked_users.id"), ),
+    Column("channel_id", ForeignKey("tracked_channels.id", ondelete='CASCADE'), ),
+    Column("user_id", ForeignKey("tracked_users.id", ), ),
 )
 
 
@@ -18,7 +18,7 @@ class TrackedChannelModel(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True, unique=True)
     pp_cutoff: Mapped[int] = mapped_column()
-    guild_id: Mapped[int] = mapped_column(ForeignKey('tracked_guilds.id'))
+    guild_id: Mapped[int] = mapped_column(ForeignKey('tracked_guilds.id', ondelete='CASCADE'))
 
 
 class TrackedUserModel(Base):
