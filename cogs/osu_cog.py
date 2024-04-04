@@ -208,6 +208,16 @@ class RenderGroup(BaseCogGroup, name='render'):
         async with self.bot.sessionmanager.session() as session:
             await self.helper.process_render(session, replay, interaction)
 
+    async def cog_app_command_error(self, interaction: discord.Interaction,
+                                    error: app_commands.AppCommandError):
+        if isinstance(error, commands.CommandOnCooldown):
+            await interaction.followup.send(
+                f"This command is on cooldown. You need to wait {error.retry_after:.2f} to use that command")
+            return
+
+        await interaction.followup.send('Something went wrong', ephemeral=True)
+        print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
+
 
 class InitCogs:
     def __init__(self, bot: commands.Bot):
