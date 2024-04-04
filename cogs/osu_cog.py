@@ -8,6 +8,7 @@ from aiosu.models import Gamemode
 from aiosu.v2 import Client
 from discord import app_commands
 from discord.ext import commands, tasks
+from discord.utils import utcnow
 
 from config import config
 from osu.api import (RippleClient, RippleRelaxClient, DirectClient, AkatsukiClient, GatariClient, AkatsukiRelaxClient,
@@ -128,9 +129,6 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
 
     @app_commands.command(name='enable')
     async def enable_tracking(self, interaction: discord.Interaction):
-        """
-        placeholder
-        """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
             resp = await self.helper.process_tracking_enable(session, channel=interaction.channel)
@@ -139,9 +137,6 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
 
     @app_commands.command(name='disable')
     async def disable_tracking(self, interaction: discord.Interaction):
-        """
-        placeholder
-        """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
             resp = await self.helper.process_tracking_disable(session, channel=interaction.channel)
@@ -154,9 +149,6 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
             interaction: discord.Interaction,
             user: discord.User = None
     ) -> None:
-        """
-        placeholder
-        """
         await interaction.response.defer(ephemeral=True)
         if not user:
             user = interaction.user
@@ -173,9 +165,6 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
             username: str = None,
             gamemode: Gamemode = Gamemode.STANDARD,
     ) -> None:
-        """
-        placeholder
-        """
         await interaction.response.defer(ephemeral=True)
         async with self.bot.sessionmanager.session() as session:
             resp = await self.helper.process_tracking_link(session, discord_id=interaction.user.id,
@@ -183,8 +172,9 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
 
         await interaction.followup.send(content=resp, ephemeral=True)
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=5)
     async def poll_tracked_users(self):
+        print(f'{utcnow()} started polling')
         async with self.bot.sessionmanager.session() as session:
             async for item in self.helper.process_tracked_users(session):
                 try:
@@ -192,29 +182,31 @@ class TrackingGroup(BaseCogGroup, name='tracking'):
                         await self.bot.get_channel(channel_id).send(embed=item[1])
                 except TypeError:
                     continue
+        print(f'{utcnow()} polling completed')
 
     @poll_tracked_users.error
     async def error_handler(self, error: Exception):
         print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
 
 
-class RenderGroup(commands.GroupCog, name='render'):
+class RenderGroup(BaseCogGroup, name='render'):
     def __init__(self, bot: commands.Bot, helper: RenderHelper) -> None:
-        self.bot = bot
-        super().__init__()
+        super().__init__(bot)
         self.helper = helper
 
     async def cog_load(self) -> None:
         await self.helper.client.connect()
 
     @app_commands.command(name='replay')
+    @app_commands.checks.cooldown(1, 300, key=None)
     async def render(
             self,
             interaction: discord.Interaction,
             replay: discord.Attachment,
     ):
         await interaction.response.defer()
-        await self.helper.process_render(replay, interaction)
+        async with self.bot.sessionmanager.session() as session:
+            await self.helper.process_render(session, replay, interaction)
 
 
 class InitCogs:
@@ -230,6 +222,7 @@ class InitCogs:
         self._direct_client = DirectClient()
         self._osutrack_client = OsutrackClient()
         self._ordr_client = ordrClient()
+        # developer_mode='devmode_success'
 
         self.api_client_map = {
             'bancho': self._bancho_client,
@@ -245,7 +238,7 @@ class InitCogs:
 
         self._api_helper = ApiHelper(self.api_client_map)
         self._osu_helper = OsuHelper(self._api_helper)
-        self._tracking_helper = TrackingHelper(self._api_helper)
+        self._tracking_helper = TrackingHelper(self._osutrack_client, self._bancho_client)
         self._render_helper = RenderHelper(self._ordr_client)
 
     async def load_cogs(self) -> None:

@@ -6,7 +6,7 @@ from random import choice
 import aiosu
 
 from osu.api.models.score import RippleScoreUser, GatariScore
-from osu.api.models.user import RippleUserFull, GatariUser, OsutrackUser
+from osu.api.models.user import RippleUserFull, GatariUser
 from utils.file_utils import extract_maps_from_osz_bytes, path_exists
 
 
@@ -62,11 +62,3 @@ class ApiHelper:
             await extract_maps_from_osz_bytes(await client.download_betmapset(beatmap.beatmapset_id))
 
         return filepath
-
-    async def update_user(self, user_id: int, **kwargs) -> OsutrackUser:
-        async with self.api_client_map['osutrack'] as client:
-            return await client.update_user(user_id, **kwargs)
-
-    async def get_score(self, score_id, gamemode, **kwargs) -> aiosu.models.Score:
-        async with self.api_client_map['bancho'] as client:
-            return await client.get_score(score_id, gamemode, **kwargs)

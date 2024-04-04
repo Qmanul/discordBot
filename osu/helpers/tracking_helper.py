@@ -5,13 +5,14 @@ import discord
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud import tracking_crud, osu_user_crud
-from osu.helpers import ApiHelper
+from osu.api import OsutrackClient
 from osu.osu_embed import create_new_hiscore_embed
 
 
 class TrackingHelper:
-    def __init__(self, api_helper: ApiHelper):
-        self.api_helper = api_helper
+    def __init__(self, track_client: OsutrackClient, bancho_client: aiosu.v2.Client):
+        self.bancho_client = bancho_client
+        self.track_client = track_client
 
     async def process_tracking_link(self, session, discord_id: int, **kwargs):
         username = kwargs.pop('username', None)
@@ -35,7 +36,7 @@ class TrackingHelper:
             return 'Please provide a valid gamemode'
 
         try:
-            user_info = await self.api_helper.get_user_info(username, **kwargs)
+            user_info = await self.bancho_client.get_user(username, mode=gamemode)
         except aiosu.exceptions.APIException:
             return f'{username} was not found'
 
@@ -76,7 +77,7 @@ class TrackingHelper:
             if not ((osu_user_id := user.osu_user_id) and (channels := user.tracked_channels)):
                 return
 
-            update_info = await self.api_helper.update_user(osu_user_id, gamemode=user.osu_gamemode)
+            update_info = await self.track_client.update_user(osu_user_id, gamemode=user.osu_gamemode)
             if not (scores := update_info.newhs):
                 return
 
