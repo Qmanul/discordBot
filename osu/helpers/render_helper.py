@@ -11,7 +11,7 @@ from orjson import orjson
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import RENDER_SKIN, RENDER_NAME
-from crud import get_render, insert_render
+from crud import render_crud
 
 
 class RenderHelper:
@@ -50,7 +50,7 @@ class RenderHelper:
         if not gamemode == Gamemode.STANDARD:
             return await inter.edit_original_response(content=f'Incorrect gamemode, o!rdr supports only std')
 
-        if render := await get_render(session, score_id):
+        if render := await render_crud.get_render(session, score_id):
             return await inter.edit_original_response(
                 content=f'<@{inter.user.id}> already rendered {render.render_url}')
 
@@ -91,7 +91,7 @@ class RenderOngoing:
 
     async def finished(self, url: str):
         await self.interaction.edit_original_response(content=f'<@{self.interaction.user.id}> render done {url}')
-        await insert_render(self.session, self.score_id, url)
+        await render_crud.insert_render(self.session, self.score_id, url)
 
 
 # я рот ебал весь парсер писать, так что только нужное

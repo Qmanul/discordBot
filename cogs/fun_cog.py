@@ -1,18 +1,17 @@
 import re
-import traceback
 
-import discord
-from discord import app_commands
-from discord.ext import commands
+import discord.app_commands
+
+from cogs import *
 
 
-class FunCog(commands.GroupCog, name='fun'):
+class FunCog(BaseCogGroup, name='fun'):
     def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
+        super().__init__(bot)
         self.emoji_url = 'https://cdn.discordapp.com/emojis/{id}.{extension}'
         self.emoji_pattern = re.compile(r'<a?:[a-zA-Z]+:[0-9]+>')
 
-    @app_commands.command(name='add_emoji')
+    @discord.app_commands.command(name='add_emoji')
     async def add_emoji(self, interaction: discord.Interaction, emoji: str, custom_name: str = ''):
         await interaction.response.defer()
         if not re.fullmatch(self.emoji_pattern, emoji):
@@ -26,7 +25,7 @@ class FunCog(commands.GroupCog, name='fun'):
 
         await interaction.edit_original_response(content=f"Added emoji: {emoji}")
 
-    @app_commands.command(name='get_avatar')
+    @discord.app_commands.command(name='get_avatar')
     async def ger_avatar(self, interaction: discord.Interaction, user: discord.User = None):
         await interaction.response.defer()
         if not user:
@@ -35,10 +34,19 @@ class FunCog(commands.GroupCog, name='fun'):
         return await interaction.edit_original_response(
             embed=discord.Embed(title=f'{user.name} avatar').set_image(url=user.display_avatar.url))
 
-    async def cog_app_command_error(self, interaction: discord.Interaction,
-                                    error: app_commands.AppCommandError):
-        await interaction.followup.send('Something went wrong', ephemeral=True)
-        print("".join(traceback.format_exception(type(error), error, error.__traceback__)))
+
+class VasermanCog(BaseCogGroup, name='vaserman'):
+    def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
+
+    @discord.app_commands.command(name='add')
+    async def ger_avatar(self, interaction: discord.Interaction, user: discord.User, amount: int = 1):
+        await interaction.response.defer()
+        if amount <= 0:
+            return await interaction.edit_original_response(content=f'Ты еблан добавлять {amount}?')
+
+        async with self.bot.sessionmanager.session() as session:
+            ...
 
 
 async def setup(bot: commands.Bot):

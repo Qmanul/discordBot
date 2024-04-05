@@ -1,12 +1,9 @@
 from typing import Sequence
 
-import sqlalchemy.exc
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
-from crud.base_crud import update_model, get_model_by_id, delete_model_by_id
-from database.models import TrackedUserModel, TrackedChannelModel
-from database.models.tracking_models import TrackedGuildModel
+from database.models import TrackedUserModel, TrackedChannelModel, TrackedGuildModel
+from . import select, AsyncSession, update_model, get_model_by_id, delete_model_by_id
 
 
 async def register_user(db_session: AsyncSession, user_id, channel_id, **kwargs) -> None:
@@ -49,7 +46,7 @@ async def insert_channel(db_session: AsyncSession, channel_id: int, guild_id: in
 
     try:
         return await update_model(db_session, channel)
-    except sqlalchemy.exc.IntegrityError:
+    except IntegrityError:
         # this shouldn't happen in the first place, but oh well
         await db_session.rollback()
         guild = TrackedGuildModel(id=guild_id)
@@ -70,7 +67,7 @@ async def delete_channel(db_session: AsyncSession, channel_id: int):
     await delete_model_by_id(db_session, channel_id, TrackedChannelModel)
 
 
-# ------ channel part ------
+# ------ guild part ------
 async def get_guild(db_session: AsyncSession, guild_id: int) -> TrackedGuildModel:
     return await get_model_by_id(db_session, guild_id, TrackedGuildModel)
 

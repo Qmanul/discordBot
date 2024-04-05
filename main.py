@@ -8,7 +8,7 @@ from aiohttp import ClientSession
 from discord.ext import commands
 
 from config import config
-from database.database import DatabaseSessionManager
+from database import DatabaseSessionManager
 
 
 class OsuBot(commands.Bot):

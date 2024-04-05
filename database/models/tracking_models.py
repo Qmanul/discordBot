@@ -1,9 +1,9 @@
 from typing import List
 
 from sqlalchemy import BigInteger, Table, Column, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import relationship
 
-from . import Base
+from . import Base, mapped_column, Mapped
 
 user_channel = Table(
     "user_channel",

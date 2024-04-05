@@ -1,7 +1,6 @@
 from sqlalchemy import BigInteger
-from sqlalchemy.orm import Mapped, mapped_column
 
-from . import Base
+from . import Base, mapped_column, Mapped
 
 
 class OsuUserModel(Base):

@@ -1,6 +1,4 @@
-from sqlalchemy.orm import mapped_column, Mapped
-
-from . import Base
+from . import Base, mapped_column, Mapped
 
 
 class RenderedScoreModel(Base):

@@ -1,7 +1,5 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from crud.base_crud import update_model, get_model_by_id
 from database.models import RenderedScoreModel
+from . import AsyncSession, update_model, get_model_by_id
 
 
 async def get_render(db_session: AsyncSession, score_id: int) -> RenderedScoreModel:
