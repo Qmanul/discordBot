@@ -1,5 +1,3 @@
-from typing import List
-
 from sqlalchemy import BigInteger, Table, Column, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -18,7 +16,7 @@ class TrackedChannelModel(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True, unique=True)
     pp_cutoff: Mapped[int] = mapped_column()
-    guild_id: Mapped[int] = mapped_column(ForeignKey('tracked_guilds.id', ondelete='CASCADE'))
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
 
 
 class TrackedUserModel(Base):
@@ -27,11 +25,4 @@ class TrackedUserModel(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True, unique=True, )
     osu_user_id: Mapped[int] = mapped_column(nullable=True)
     osu_gamemode: Mapped[int] = mapped_column(nullable=True)
-    tracked_channels: Mapped[List[TrackedChannelModel]] = relationship(secondary=user_channel, lazy='joined')
-
-
-class TrackedGuildModel(Base):
-    __tablename__ = 'tracked_guilds'
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True, unique=True, )
-    tracked_channels: Mapped[List[TrackedChannelModel]] = relationship(lazy='joined', cascade='all, delete')
+    tracked_channels: Mapped[list[TrackedChannelModel]] = relationship(secondary=user_channel, lazy='joined')

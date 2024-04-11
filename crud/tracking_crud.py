@@ -1,9 +1,7 @@
 from typing import Sequence
 
-from sqlalchemy.exc import IntegrityError
-
-from database.models import TrackedUserModel, TrackedChannelModel, TrackedGuildModel
-from . import select, AsyncSession, update_model, get_model_by_id, delete_model_by_id
+from database.models import TrackedUserModel, TrackedChannelModel
+from . import select, AsyncSession, update_model, get_model_by_id, delete_model_by_id, delete
 
 
 async def register_user(db_session: AsyncSession, user_id, channel_id, **kwargs) -> None:
@@ -43,23 +41,12 @@ async def get_channel(db_session: AsyncSession, channel_id: int, ) -> TrackedCha
 
 async def insert_channel(db_session: AsyncSession, channel_id: int, guild_id: int, **kwargs) -> TrackedChannelModel:
     channel = TrackedChannelModel(id=channel_id, pp_cutoff=kwargs.pop('pp_cutoff', 0), guild_id=guild_id)
-
-    try:
-        return await update_model(db_session, channel)
-    except IntegrityError:
-        # this shouldn't happen in the first place, but oh well
-        await db_session.rollback()
-        guild = TrackedGuildModel(id=guild_id)
-        await update_model(db_session, guild)
-        return await update_model(db_session, channel)
+    return await update_model(db_session, channel)
 
 
-async def create_or_update_channel(db_session: AsyncSession, channel_id: int, **kwargs) -> TrackedChannelModel:
-    if channel := await get_channel(db_session, channel_id):
-        channel.pp_cutoff = kwargs.pop('pp_cutoff', channel.pp_cutoff)
-    else:
-        channel = TrackedChannelModel(id=channel_id, pp_cutoff=kwargs.pop('pp_cutoff', 0))
-
+async def update_channel(db_session: AsyncSession, channel_id: int, **kwargs) -> TrackedChannelModel:
+    channel = await get_channel(db_session, channel_id)
+    channel.pp_cutoff = kwargs.pop('pp_cutoff')
     return await update_model(db_session, channel)
 
 
@@ -67,15 +54,6 @@ async def delete_channel(db_session: AsyncSession, channel_id: int):
     await delete_model_by_id(db_session, channel_id, TrackedChannelModel)
 
 
-# ------ guild part ------
-async def get_guild(db_session: AsyncSession, guild_id: int) -> TrackedGuildModel:
-    return await get_model_by_id(db_session, guild_id, TrackedGuildModel)
-
-
-async def insert_guild(db_session: AsyncSession, guild_id: int) -> TrackedGuildModel:
-    guild = TrackedGuildModel(id=guild_id)
-    return await update_model(db_session, guild)
-
-
-async def delete_guild(db_session: AsyncSession, guild_id: int):
-    await delete_model_by_id(db_session, guild_id, TrackedGuildModel)
+async def delete_channel_by_guild_id(db_session: AsyncSession, guild_id: int):
+    await db_session.execute(delete(TrackedChannelModel).where(TrackedChannelModel.guild_id == guild_id))
+    await db_session.commit()
